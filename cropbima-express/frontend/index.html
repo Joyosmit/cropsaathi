@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CropBima Express — PMFBY Kiosk</title>
+<link rel="stylesheet" href="/static/styles.css"/>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <h1>🌾 CropBima Express <span class="sub">/ क्रॉपबीमा एक्सप्रेस</span></h1>
+    <p>Voice-first PMFBY crop-loss claim kiosk · Sarvam Vision + Saaras + Bulbul</p>
+    <div class="langrow">
+      <label>Language / भाषा:
+        <select id="lang">
+          <option value="hi-IN">हिंदी</option><option value="mr-IN" selected>मराठी</option>
+          <option value="ta-IN">தமிழ்</option><option value="te-IN">తెలుగు</option>
+          <option value="bn-IN">বাংলা</option><option value="en-IN">English</option>
+        </select>
+      </label>
+      <span id="mode" class="pill">LIVE ● Sarvam API</span>
+    </div>
+  </div>
+</header>
+<main class="wrap">
+  <section class="card steps">
+    <div class="step active" id="s1">1 · Upload</div>
+    <div class="step" id="s2">2 · Verify</div>
+    <div class="step" id="s3">3 · Voice audit</div>
+    <div class="step" id="s4">4 · Submit</div>
+  </section>
+
+  <section class="card">
+    <h2>Step 1 · Upload documents <small>PMFBY complaint form + 7/12 extract (PNG/JPG/PDF)</small></h2>
+    <div class="two">
+      <div>
+        <h3>📝 Complaint form <small>फसल क्षति सूचना प्रपत्र</small></h3>
+        <div id="dropForm" class="drop small">Drop form here or<br/><br/>
+          <label class="btn">📁 Choose form<input type="file" id="fileForm" accept=".png,.jpg,.jpeg,.pdf,.webp" hidden/></label>
+        </div>
+        <p id="formPrev" class="thumb"></p>
+      </div>
+      <div>
+        <h3>🗺️ 7/12 extract <small>सातबारा उतारा</small></h3>
+        <div id="dropLand" class="drop small">Drop 7/12 here or<br/><br/>
+          <label class="btn">📁 Choose 7/12<input type="file" id="fileLand" accept=".png,.jpg,.jpeg,.pdf,.webp" hidden/></label>
+        </div>
+        <p id="landPrev" class="thumb"></p>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn big green" id="processPairBtn">⚙️ Process both documents</button>
+      <button class="btn ghost" id="demoBtn" type="button">✨ Use my sample docs</button>
+    </div>
+    <p id="docStatus" class="status">Tip: upload the handwritten PMFBY form + the 7/12 extract together.</p>
+  </section>
+
+  <section class="card" id="verifyCard" hidden>
+    <h2>Step 2 · Extracted details</h2>
+    <div id="fields" class="grid"></div>
+    <div class="row"><button class="btn" id="auditBtn">🔍 Run PMFBY audit</button></div>
+  </section>
+
+  <section class="card" id="auditCard" hidden>
+    <h2>Step 3 · Voice audit <small>speak the missing info</small></h2>
+    <div id="auditOut"></div>
+    <div class="row">
+      <button class="btn big red" id="recBtn">🎤 Speak / बोलें</button>
+      <button class="btn" id="ttsBtn">🔊 Listen prompt</button>
+    </div>
+    <p id="heard" class="status"></p>
+    <audio id="player" controls style="width:100%;display:none"></audio>
+  </section>
+
+  <section class="card" id="submitCard" hidden>
+    <h2>Step 4 · Submit PMFBY claim</h2>
+    <div class="row">
+      <button class="btn big green" id="submitBtn">✅ Submit / जमा करें</button>
+      <a class="btn" id="pdfBtn" href="#" target="_blank" hidden>🧾 Receipt PDF</a>
+    </div>
+    <p id="refOut" class="ref"></p>
+    <pre id="jsonOut"></pre>
+  </section>
+</main>
+<footer class="wrap foot">PMFBY helpline: 14447 (toll-free) · Backend: <code>/docs</code></footer>
+<script src="/static/app.js"></script>
+</body></html>

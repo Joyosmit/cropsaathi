@@ -1,0 +1,25 @@
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,'Nirmala UI','Mangal',sans-serif;background:#eef7ee;color:#14210f;font-size:19px}
+.wrap{max-width:960px;margin:0 auto;padding:16px}
+.hero{background:linear-gradient(135deg,#14532d,#22a06b);color:#fff}
+.hero h1{margin:8px 0;font-size:34px}.sub{font-size:20px;opacity:.9}
+.langrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+select{font-size:18px;padding:10px 14px;border-radius:12px}
+.pill{background:#052e16;padding:6px 14px;border-radius:999px;font-size:15px}
+.card{background:#fff;border-radius:18px;padding:22px;margin:16px 0;box-shadow:0 6px 24px rgba(0,0,0,.08)}
+.card h2{margin-top:0}.card small{color:#555;font-weight:400}
+.steps{display:flex;gap:10px}.step{flex:1;text-align:center;padding:12px;border-radius:12px;background:#eee;font-weight:700}.step.active{background:#166534;color:#fff}
+.drop{border:3px dashed #16a34a;border-radius:16px;padding:34px;text-align:center;font-size:22px;background:#f0fdf4}
+.drop.small{padding:18px;font-size:18px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.two{grid-template-columns:1fr}}
+.thumb img{max-width:100%;border-radius:12px;border:1px solid #ccc;margin-top:8px}
+.src{font-size:15px;color:#555}
+.ver{border-left:6px solid #16a34a}.ver.bad{border-color:#b91c1c}
+.btn{display:inline-block;background:#166534;color:#fff;border:0;border-radius:14px;padding:14px 26px;font-size:20px;font-weight:800;cursor:pointer;margin:6px 6px 6px 0;text-decoration:none}
+.btn.big{font-size:24px;padding:18px 34px}.btn.green{background:#15803d}.btn.red{background:#b91c1c}.btn.ghost{background:#e5e7eb;color:#111}
+.status{font-size:19px;background:#f8fafc;padding:10px 14px;border-radius:10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{border:1px solid #ddd;border-radius:12px;padding:12px}.field b{display:block;color:#555;font-size:15px}.field span{font-size:22px;font-weight:700}
+.field input{width:100%;font-size:20px;padding:8px;border-radius:8px;border:1px solid #bbb}
+.row{margin-top:12px}.ref{font-size:26px}.foot{color:#444;padding-bottom:40px}pre{background:#0f172a;color:#d1fae5;padding:14px;border-radius:12px;overflow:auto}
+@media(max-width:640px){.grid{grid-template-columns:1fr}.hero h1{font-size:26px}}
