@@ -115,9 +115,12 @@ $("recBtn").onclick = async () => {
       const vf = await api("/api/v1/claims/voice-fill", {method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({data: claim, transcript: s.transcript, language: $("lang").value, target_field: target})});
       claim = vf.updated_data;
-      if (vf.filled_field) {
-        $("heard").textContent += `  → updated: ${vf.filled_field} = ${claim[vf.filled_field]} ✅`;
-        speak(`${vf.filled_field} updated.`);
+      const allFilled = vf.updated_data._filled_fields || (vf.filled_field ? [vf.filled_field] : []);
+      delete claim._filled_fields;
+      if (allFilled.length) {
+        const vals = allFilled.map(f => `${f} = ${claim[f]}`).join(", ");
+        $("heard").textContent += `  → updated: ${vals} ✅`;
+        speak(`${allFilled.join(" and ")} updated.`);
       } else {
         $("heard").textContent += "  → no field matched. Pick a field above or speak a full correction (e.g. 'father name is …').";
         speak("Sorry, I could not match that. Please pick a field or speak again.");
@@ -141,10 +144,21 @@ $("ttsBtn").onclick = async () => {
 };
 // ---- submit ----
 $("submitBtn").onclick = async () => {
-  const c = await api("/api/v1/claims", {method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({...claim, language:$("lang").value})});
-  const s = await api(`/api/v1/claims/${c.id}/submit`, {method:"POST"});
-  $("refOut").textContent = `✅ Claim ${s.reference} submitted!`;
-  $("jsonOut").textContent = JSON.stringify(s.summary, null, 2);
-  const pdf = $("pdfBtn"); pdf.hidden = false; pdf.href = `/api/v1/claims/${c.id}/receipt.pdf`;
+  // re-read visible boxes so manual edits are never lost
+  $("fields").querySelectorAll("input").forEach(i => {
+    let v = i.value;
+    if (["land_area_acres","land_area_hectare","damage_percentage"].includes(i.dataset.k)) v = v===""?null:Number(v);
+    claim[i.dataset.k] = v;
+  });
+  $("submitBtn").disabled = true;
+  $("refOut").textContent = "⏳ Submitting…";
+  try {
+    const c = await api("/api/v1/claims", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({...claim, language:$("lang").value})});
+    const s = await api(`/api/v1/claims/${c.id}/submit`, {method:"POST"});
+    $("refOut").textContent = `✅ Claim ${s.reference} submitted!`;
+    $("jsonOut").textContent = JSON.stringify(s.summary, null, 2);
+    const pdf = $("pdfBtn"); pdf.hidden = false; pdf.href = `/api/v1/claims/${c.id}/receipt.pdf`;
+  } catch(e){ $("refOut").textContent = "❌ " + e.message; }
+  finally { $("submitBtn").disabled = false; }
 };

@@ -94,39 +94,53 @@ def audit_claim(data: Dict[str, Any], language: str = "hi-IN"):
             "summary": summary}
 
 
-CROPS = ["soybean", "paddy", "cotton", "wheat", "sugarcane", "maize",
-         "सोयाबीन", "धान", "कपास", "कापूस", "भात", "गेहूं", "pady", "bhat", "dhan"]
-CAUSES = {"flood": "Flood", "बाढ़": "Flood", "पूर": "Flood", "drought": "Drought",
+CROPS = ["soybean", "soyabean", "soyabin", "soya", "सोयाबीन", "सोयाबिन",
+         "paddy", "pady", "bhat", "भात", "dhan", "धान",
+         "cotton", "कपास", "कापूस", "wheat", "गेहूं", "sugarcane", "maize"]
+CROP_CANON = {"soyabean": "Soybean", "soyabin": "Soybean", "soya": "Soybean",
+              "सोयाबीन": "Soybean", "सोयाबिन": "Soybean",
+              "pady": "Paddy", "bhat": "Paddy (भात)", "dhan": "Paddy", "धान": "Paddy", "भात": "Paddy (भात)"}
+CAUSES = {"flood": "Flood", "बाढ़": "Flood", "पूर": "Flood", "baar": "Flood",
+          "barish": "Excess Rainfall", "baarish": "Excess Rainfall",
+          "drought": "Drought",
           "सूखा": "Drought", "दुष्काळ": "Drought", "hail": "Hailstorm",
           "गारपीट": "Hailstorm", "pest": "Pest Attack", "कीट": "Pest Attack",
           "rain": "Excess Rainfall", "बारिश": "Excess Rainfall", "पाऊस": "Excess Rainfall"}
 
 
-def _detect_field(tl: str):
-    """Guess which claim field the transcript is about (correction mode)."""
-    if re.search(r"(father|पिता|वडील|father'?s?\s*name)", tl):
-        return "father_name"
-    if re.search(r"(mobile|मोबाइल|मोबाईल|phone|number.*\d)", tl) and re.search(r"\d{6,}", tl):
-        return "mobile_number"
+def _detect_fields(tl: str):
+    """All claim fields the transcript touches (multi-intent: crop + cause)."""
+    found = []
+    if re.search(r"(father|पिता|वडील)", tl):
+        found.append("father_name")
+    if re.search(r"(mobile|मोबाइल|मोबाईल|phone)", tl) and re.search(r"\d{6,}", tl):
+        found.append("mobile_number")
     if re.search(r"(survey|khasra|गट|सर्वे|खसरा|gat).{0,10}\d|^\d+\s*/\s*\d+", tl):
-        return "survey_khasra_number"
+        found.append("survey_khasra_number")
     if re.search(r"(village|gaon|गांव|गाव|taluka|तालुका|district|जिला|जिल्हा)", tl):
-        return "village_taluka_district"
+        found.append("village_taluka_district")
     if re.search(r"(acre|hectare|एकर|हेक्टर|क्षेत्र|रकबा|area)", tl) or re.search(r"\d+\.\d+", tl):
-        return "land_area_acres"
+        found.append("land_area_acres")
     for c in CROPS:
         if c in tl:
-            return "crop_type"
+            found.append("crop_type")
+            break
     for k in CAUSES:
         if k in tl:
-            return "damage_reason"
-    if re.search(r"(loss|nuksan|नुकसान|क्षति|percent|टक्के|प्रतिशत|%)", tl):
-        return "damage_percentage"
-    if re.search(r"(date|तारीख|दिनांक|loss.*day|august|september|जानेवारी|फेब्रुवारी|मार्च|एप्रिल|मे|जून|जुलै|ऑगस्ट|सप्टेंबर|जुलाई|अगस्त|सितंबर|\d{1,2}[/\-]\d{1,2})", tl):
-        return "loss_date"
-    if re.search(r"(name|नाव|नाम)\s+(is|आहे|है)?", tl):
-        return "farmer_name"
-    return None
+            found.append("damage_reason")
+            break
+    if re.search(r"(loss|nuksan|नुकसान|क्षति|kharab|खराब|percent|टक्के|प्रतिशत|%)", tl):
+        found.append("damage_percentage")
+    if re.search(r"(date|तारीख|दिनांक|august|september|जुलाई|अगस्त|सितंबर|\d{1,2}[/\-]\d{1,2})", tl):
+        found.append("loss_date")
+    if not found and re.search(r"(name|नाव|नाम)", tl):
+        found.append("farmer_name")
+    return found
+
+
+def _detect_field(tl: str):
+    f = _detect_fields(tl)
+    return f[0] if f else None
 
 
 def _apply_value(updated: Dict[str, Any], f: str, t: str, tl: str) -> bool:
@@ -163,14 +177,17 @@ def _apply_value(updated: Dict[str, Any], f: str, t: str, tl: str) -> bool:
     if f == "crop_type":
         for c in CROPS:
             if c in tl:
-                updated["crop_type"] = c
+                updated["crop_type"] = CROP_CANON.get(c, c.capitalize() if c.isascii() else c)
                 return True
         updated["crop_type"] = t[:40]
         return True
     if f == "damage_reason":
         for k, v in CAUSES.items():
             if k in tl:
-                updated["damage_reason"] = v
+                if v == "Flood" and ("rain" in tl or "barish" in tl or "baar" in tl or "वजह" in tl or "wajah" in tl):
+                    updated["damage_reason"] = "Heavy Rains & Flood (अतिवृष्टि एवं बाढ़)"
+                else:
+                    updated["damage_reason"] = v
                 return True
         updated["damage_reason"] = t[:80]
         return True
@@ -218,18 +235,17 @@ def merge_voice_into_claim(data: Dict[str, Any], transcript: str, target_field=N
         else:
             fields = missing + ["damage_percentage"]
     else:
-        # correction mode: everything filled -> detect which field user means
-        guessed = _detect_field(tl)
-        fields = [guessed] if guessed else []
-    filled = None
+        # correction mode: apply EVERY detected field (crop + cause together)
+        fields = _detect_fields(tl)
+    filled_list = []
     for f in fields:
         if not f:
             continue
         if audit["missing_fields"] and not _empty(updated.get(f)) and f != "damage_percentage":
             continue  # gap mode must not overwrite good OCR values
         if _apply_value(updated, f, t, tl):
-            filled = f
-            break
+            filled_list.append(f)
+    filled = filled_list[0] if filled_list else None
     if not filled and not audit["missing_fields"]:
         return updated, None  # correction mode: don't scribble transcript into random fields
     if not filled:
@@ -237,4 +253,6 @@ def merge_voice_into_claim(data: Dict[str, Any], transcript: str, target_field=N
         if miss and (updated.get(miss[0]) in (None, "")):
             updated[miss[0]] = t[:120]
             filled = miss[0]
+            filled_list = [filled]
+    updated["_filled_fields"] = filled_list
     return updated, filled
