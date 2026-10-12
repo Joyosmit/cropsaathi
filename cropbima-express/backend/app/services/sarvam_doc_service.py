@@ -94,6 +94,11 @@ MOCK_LAND_RESULT: Dict[str, Any] = {
 }
 
 
+def _client():
+    from sarvamai import SarvamAI
+    return SarvamAI(api_subscription_key=settings.SARVAM_API_KEY)
+
+
 def _download_text(client, job_id: str, limit: int = 8000) -> str:
     """Download digitise output; unzip if Sarvam returns a .zip bundle."""
     import httpx
@@ -259,13 +264,7 @@ def _process_sync(file_path: str, language: str, timeout_s: int, doc_type: str =
             if s in terminal:
                 break
             time.sleep(4)
-        try:
-            dl = client.doc_ai.get_download_url(job_id=did)
-            url = getattr(dl, "url", None)
-            if url:
-                raw_text = httpx.request("GET", url, timeout=30).text[:8000]
-        except Exception:
-            pass
+        raw_text = _download_text(client, did)
     except Exception:
         pass
     if is_form:
@@ -287,9 +286,11 @@ def _to_iso_date(s: Any) -> str:
 def _normalize_form(x: Dict[str, Any], raw_text: str) -> Dict[str, Any]:
     area_ha = _num(x.get("affected_area"))
     acres = round(area_ha * 2.47105, 2) if area_ha else None
-    crop = _dev(x.get("crop_name"))
-    if "Paddy" in str(x.get("crop_name") or "") and "भात" not in crop:
-        crop = f"Paddy ({crop})" if crop else "Paddy"
+    crop = _dev(x.get("crop_name")).replace("((", "(").replace("))", ")")
+    if crop.startswith("(") and crop.endswith(")"):
+        crop = crop[1:-1]
+    if "Paddy" in crop and "भात" not in crop:
+        crop = f"Paddy (भात)"
     cause = _dev(x.get("cause_of_loss"))
     if "Heavy" in str(x.get("cause_of_loss") or ""):
         cause = "Heavy Rains & Flood (अतिवृष्टि एवं बाढ़)"

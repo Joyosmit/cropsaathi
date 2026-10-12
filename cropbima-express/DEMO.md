@@ -1,75 +1,60 @@
 # 🎤 CropBima Express — Hackathon Demo Guide (5 minutes)
 
-**One-liner:** Voice-first PMFBY claim kiosk — farmer uploads a 7/12 photo,
-Sarvam Vision digitises it, Saaras voice fills the gaps, Bulbul speaks back,
-claim submitted with PDF receipt.
+**One-liner:** Farmer uploads a handwritten PMFBY form + 7/12 extract →
+Sarvam Vision reads all 10 Devanagari fields → 7/12 cross-verifies →
+voice fills gaps (Saaras) → Bulbul speaks back → claim + PDF receipt.
 
-## 0. Project map (what lives where)
+## 0. Project map
 ```
 cropbima-express/
 ├── backend/
-│   ├── app/main.py                  # FastAPI + serves kiosk at /app
-│   ├── app/config.py                # SARVAM_API_KEY, MOCK_MODE
+│   ├── app/main.py               # FastAPI + kiosk at /app
 │   ├── app/services/
-│   │   ├── sarvam_doc_service.py    # Vision digitise+extract (live) / mock
-│   │   ├── sarvam_voice_service.py  # Saaras v4 STT + Bulbul v3 TTS (live) / mock
-│   │   ├── claim_rules_engine.py    # PMFBY audit + Marathi/Hindi prompts + voice merge
-│   │   └── translation_service.py   # translate helper
-│   ├── app/routes/                  # documents / voice / claims APIs
-│   ├── app/models/                  # SQLite claim table + schemas
-│   ├── .env                         # ← YOUR LIVE KEY IS HERE (MOCK_MODE=false) ✅
-│   └── requirements.txt
-├── frontend/                        # NO React — plain HTML/CSS/JS, zero build
-│   ├── index.html  styles.css  app.js
-│   └── assets/sample_khasra.svg     # demo 7/12 doc
-├── test_data/                       # mock payload + sample record text
-└── README.md
+│   │   ├── sarvam_doc_service.py # Vision: COMPLAINT_SCHEMA (10 fields) + LAND_SCHEMA,
+│   │   │                         # Devanagari-digit→ISO normalize, ha→acre, merge+verify
+│   │   ├── sarvam_voice_service.py # Saaras v4 STT + Bulbul v3 TTS (simran)
+│   │   ├── claim_rules_engine.py   # PMFBY audit + 5-language prompts + voice merge
+│   ├── app/routes/  documents (/process, /process-pair) · voice · claims
+│   ├── .env  → LIVE key, MOCK_MODE=false ✅
+├── frontend/  plain HTML/CSS/JS — two upload slots (form + 7/12), verification cards
+│   └── assets/sample_pmfby_form.png + sample_712_extract.png  ← YOUR real samples
+├── test_data/ same two PNGs + mock payload
+└── DEMO.md (this file)
 ```
 
-## 1. Run it (30 seconds)
+## 1. Run (server already live; if needed)
 ```powershell
 cd cropbima-express/backend
 python -m uvicorn app.main:app --port 8000
 ```
-| URL | What |
-|---|---|
-| http://localhost:8000/app | 📱 Kiosk UI (demo this!) |
-| http://localhost:8000/docs | Swagger APIs |
-| http://localhost:8000/health | `{"mock_mode": false}` = LIVE ✅ |
+Kiosk http://localhost:8000/app · APIs /docs · health /health (`mock_mode:false`)
 
-No `npm install`, no build — kiosk is served by FastAPI itself.
+## 2. The 5-minute script — with YOUR documents
+1. **Hook (30s):** "PMFBY fails on paper: this handwritten Marathi form +
+   this blurred 7/12. Our kiosk reads both and talks to the farmer."
+2. **Upload (60s):** Click **✨ Use my sample docs** → previews appear →
+   **⚙️ Process both documents**. Narrate: "Extract schema pulls fields
+   1–10: रामभरोसे पटेल, 101/2/ब, भात, 0.3490 हेक्टर, 14/08/2026,
+   अतिवृष्टि एवं बाढ़, 80%, 9876543210 — Devanagari digits normalized,
+   hectare→0.86 acres."
+3. **Cross-check (45s):** Point at verification cards: "Survey 101/2/ब ✅
+   matches the 7/12; name ⚠️ differs (claimant vs holder काशिनाथ विठ्ठल पाटील)
+   — the system flags family/holder mismatches instead of silently passing."
+   7/12 also confirms crop भात + Raigad district.
+4. **Audit+voice (75s):** **🔍 Run PMFBY audit** → eligible ✅ (or speak a
+   correction) → **🔊 Listen prompt** → **🎤 Speak** a Marathi correction →
+   Saaras fills it live.
+5. **Submit (30s):** **✅ Submit** → `PMFBY-2026-00000X` + JSON + **🧾 PDF**.
+   "Helpline 14447 on the receipt."
+6. **Close (30s):** `/docs` → "process-pair, stt, tts, audit, voice-fill —
+   and MOCK_MODE=true replays the same flow offline."
 
-## 2. The 5-minute demo script (follow exactly)
-1. **Hook (30s):** "PMFBY claims fail because 7/12 extracts are handwritten in
-   Marathi/Hindi and farmers can't fill English portals. We made a kiosk that
-   listens." Open `/app`.
-2. **Upload (60s):** Click **✨ Use sample doc** → narrate: "Sarvam Vision
-   (`doc_ai.digitise` + `extract`) is OCR-ing the 7/12…" Fields appear.
-3. **Audit gap (60s):** **🔍 Run PMFBY audit** → `loss_date` missing →
-   Hindi prompt shows: *"नुकसान की तारीख समझ नहीं आ रही…"* Click
-   **🔊 Listen prompt** (Bulbul v3 speaks it — judges hear it!).
-4. **Voice fill (90s):** Click **🎤 Speak** and read the Marathi line on the
-   sample doc: *"पाऊस 18 सप्टेंबर, सोयाबीनचे साठ टक्के नुकसान"*
-   → Saaras v4 transcribes → `loss_date=2026-09-18`, `damage=60%` auto-fill ✅
-5. **Submit (30s):** **✅ Submit** → `PMFBY-2026-000001` reference + JSON +
-   **🧾 Receipt PDF**. Mention helpline 14447.
-6. **Close (30s):** Flip to `/docs` — "Every step is an API: STT, TTS, audit,
-   voice-fill — works without a key in MOCK_MODE too."
+## 3. Verified live (Oct 12, your files)
+- Form extract: all 10 fields correct (incl. १०१/२/ब, ०.३४९० हेक्टर, ८०%)
+- 7/12: holder काशिनाथ विठ्ठल पाटील, survey 101/2/ब, crop भात, Raigad
+- Merged → audit eligible ✅ → claim created → submitted (PMFBY-2026-000002) ✅
+- TTS Bulbul v3 (`simran`) 158KB WAV ✅ · STT Saaras v4 ✅
 
-## 3. If internet dies (fallback)
-Set `MOCK_MODE=true` in `backend/.env`, restart — same UI flow with canned
-Ramesh Patil data. Mention it: "graceful offline demo mode."
+## 4. If offline
+`MOCK_MODE=true` → same UI with रामभरोसे पटेल canned data.
 
-## 4. What to say about Sarvam usage (judges ask this)
-- **Vision:** `client.doc_ai.digitise(file=[...], output_format="md")` poll
-  `get_status` → `get_download_url`; then `extract(schema=CLAIM_SCHEMA)`.
-- **STT:** `client.speech_to_text.transcribe(file, model="saaras:v4", mode="transcribe")`
-  → transcript + `language_code` auto-detect (Marathi/Hinglish/noisy audio).
-- **TTS:** `client.text_to_speech.convert(text, language_code, model="bulbul:v3", speaker="simran")`
-  → base64 WAV (note: `anushka` is v2-only — we use `simran`).
-- **Translate:** `client.text.translate(...)` verified live with your key.
-
-## 5. Files to show judges
-- `backend/.env` → live key, `MOCK_MODE=false`
-- `smoke.py` output (already verified: HEALTH/AUDIT/VOICEFILL/TTS/SUBMIT/PDF all ✅)
-- `test_data/mock_claim_payload.json` → missing-field test case
