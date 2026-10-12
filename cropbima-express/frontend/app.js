@@ -79,12 +79,23 @@ $("auditBtn").onclick = () => runAudit();
 async function runAudit(){
   auditR = await api("/api/v1/claims/audit", {method:"POST", headers:{"Content-Type":"application/json"},
     body: JSON.stringify({data: claim, language: $("lang").value})});
+  renderAudit();
+}
+function renderAudit(){
   $("auditCard").hidden = false; step(3);
-  lastPrompt = auditR.next_prompts[0] || "";
-  $("auditOut").innerHTML =
-    `<p>Eligible: <b>${auditR.eligible?"Yes ✅":"No — missing: "+auditR.missing_fields.join(", ")}</b></p>` +
-    (auditR.payout_hint?`<p>💡 ${auditR.payout_hint}</p>`:"") +
-    auditR.next_prompts.map(p=>`<p class="status">🎙️ ${p}</p>`).join("");
+  lastPrompt = auditR.next_prompts[0] || auditR.summary || "";
+  let html = `<p>Eligible: <b>${auditR.eligible?"Yes ✅":"No — missing: "+auditR.missing_fields.join(", ")}</b></p>` +
+    (auditR.payout_hint?`<p>💡 ${auditR.payout_hint}</p>`:"");
+  if (auditR.next_prompts.length) html += auditR.next_prompts.map(p=>`<p class="status">🎙️ ${p}</p>`).join("");
+  else if (auditR.summary) html += `<p class="status">🎙️ ${auditR.summary}</p>`;
+  html += `<p class="hint">Or correct any single field by voice: <select id="targetField">` +
+    `<option value="">auto-detect</option>` +
+    [["farmer_name","Farmer"],["father_name","Father"],["survey_khasra_number","Survey/Gat"],
+     ["land_area_acres","Area"],["village_taluka_district","Village"],["crop_type","Crop"],
+     ["damage_reason","Cause"],["damage_percentage","Loss %"],["loss_date","Loss date"],
+     ["mobile_number","Mobile"]].map(([v,l])=>`<option value="${v}">${l}</option>`).join("") +
+    `</select></p>`;
+  $("auditOut").innerHTML = html;
   if (auditR.eligible) { $("submitCard").hidden = false; step(4); }
 }
 // ---- voice ----
@@ -100,25 +111,33 @@ $("recBtn").onclick = async () => {
     try {
       const s = await api("/api/v1/voice/stt", {method:"POST", body:fd});
       $("heard").textContent = "👂 Heard ("+s.language_code+"): " + s.transcript;
+      const target = document.getElementById("targetField")?.value || null;
       const vf = await api("/api/v1/claims/voice-fill", {method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({data: claim, transcript: s.transcript, language: $("lang").value})});
+        body: JSON.stringify({data: claim, transcript: s.transcript, language: $("lang").value, target_field: target})});
       claim = vf.updated_data;
-      $("heard").textContent += vf.filled_field ? `  → filled: ${vf.filled_field} ✅` : "";
-      renderFields(); auditR = vf.audit;
-      lastPrompt = auditR.next_prompts[0]||"";
-      $("auditOut").innerHTML = `<p>Eligible: <b>${auditR.eligible?"Yes ✅":"No — missing: "+auditR.missing_fields.join(", ")}</b></p>` +
-        auditR.next_prompts.map(p=>`<p class="status">🎙️ ${p}</p>`).join("");
-      if (auditR.eligible) { $("submitCard").hidden = false; step(4); }
+      if (vf.filled_field) {
+        $("heard").textContent += `  → updated: ${vf.filled_field} = ${claim[vf.filled_field]} ✅`;
+        speak(`${vf.filled_field} updated.`);
+      } else {
+        $("heard").textContent += "  → no field matched. Pick a field above or speak a full correction (e.g. 'father name is …').";
+        speak("Sorry, I could not match that. Please pick a field or speak again.");
+      }
+      renderFields(); auditR = vf.audit; renderAudit();
     } catch(e){ $("heard").textContent = "❌ " + e.message; }
   };
   mediaRec.start(); $("recBtn").textContent = "⏹️ Stop / रोकें";
   setTimeout(()=>{ if(mediaRec.state==="recording") mediaRec.stop(); $("recBtn").textContent="🎤 Speak / बोलें"; }, 25000);
 };
+async function speak(text){
+  try {
+    const b = await api("/api/v1/voice/tts", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({text, language_code:$("lang").value, speaker:"simran"})});
+    const p = $("player"); p.src = URL.createObjectURL(b); p.style.display="block"; p.play();
+  } catch(e){ console.warn("tts failed", e); }
+}
 $("ttsBtn").onclick = async () => {
   if (!lastPrompt) return alert("No prompt yet — run audit first");
-  const b = await api("/api/v1/voice/tts", {method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({text:lastPrompt, language_code:$("lang").value, speaker:"simran"})});
-  const p = $("player"); p.src = URL.createObjectURL(b); p.style.display="block"; p.play();
+  speak(lastPrompt);
 };
 // ---- submit ----
 $("submitBtn").onclick = async () => {

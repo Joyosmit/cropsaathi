@@ -22,4 +22,6 @@ select{font-size:18px;padding:10px 14px;border-radius:12px}
 .field{border:1px solid #ddd;border-radius:12px;padding:12px}.field b{display:block;color:#555;font-size:15px}.field span{font-size:22px;font-weight:700}
 .field input{width:100%;font-size:20px;padding:8px;border-radius:8px;border:1px solid #bbb}
 .row{margin-top:12px}.ref{font-size:26px}.foot{color:#444;padding-bottom:40px}pre{background:#0f172a;color:#d1fae5;padding:14px;border-radius:12px;overflow:auto}
+.hint{font-size:17px;background:#eff6ff;padding:10px 14px;border-radius:10px}
+.hint select{font-size:17px;padding:8px 12px;border-radius:10px}
 @media(max-width:640px){.grid{grid-template-columns:1fr}.hero h1{font-size:26px}}

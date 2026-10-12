@@ -38,6 +38,7 @@ class AuditResponse(BaseModel):
     next_prompts: List[str]
     next_field: Optional[str] = None
     payout_hint: Optional[str] = None
+    summary: str = ""
 
 class VoiceFillRequest(BaseModel):
     data: Dict[str, Any]

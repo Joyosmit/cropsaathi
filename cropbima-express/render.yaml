@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: cropbima-express
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    rootDir: cropbima-express
+    envVars:
+      - key: SARVAM_API_KEY
+        sync: false
+      - key: MOCK_MODE
+        value: "false"
+      - key: DATABASE_URL
+        value: sqlite+aiosqlite:///./cropbima.db
+      - key: PYTHONPATH
+        value: backend
